@@ -1,60 +1,24 @@
+# Test compatibility with applications written in ksh
 sudo: required
-language: c
-
-matrix:
-    include:
-        - os: linux
-          compiler: gcc
-          env:
-            - DISTRO_TYPE=fedora
-              INSTALL_REQUIREMENTS="dnf repolist; dnf install -y gcc python3 meson sudo langpacks-zh_CN ed ncurses vi findutils which"
-          before_install:
-              - docker pull ${DISTRO_TYPE}
-
-        # Note: Meson 0.44.0 is the newest version that works with Python
-        # 3.4 available on OpenSuse Leap. See issue #430.
-        - os: linux
-          compiler: gcc
-          env:
-            - DISTRO_TYPE=opensuse
-              INSTALL_REQUIREMENTS="zypper refresh; zypper in -y gcc python3 python3-pip ninja sudo glibc-locale glibc-devel ed ncurses-utils vim findutils which; pip3 install meson==0.44.0"
-          before_install:
-              - docker pull ${DISTRO_TYPE}
-
-        # Ubuntu requires explicitly generating en_US.UTF-8 locale
-        - os: linux
-          compiler: gcc
-          env:
-            - DISTRO_TYPE=ubuntu
-              INSTALL_REQUIREMENTS="apt-get update; apt-get install -y gcc python3 sudo locales ed vim python3-pip ninja-build findutils debianutils; pip3 install meson==0.44.0; locale-gen en_US.UTF-8"
-          before_install:
-              - docker pull ${DISTRO_TYPE}
-
-        # Debian requires explicitly generating en_US.UTF-8 locale too
-        - os: linux
-          compiler: gcc
-          env:
-            - DISTRO_TYPE=debian
-              INSTALL_REQUIREMENTS="apt-get update; apt-get install -y gcc python3 python3-pip ninja-build sudo locales ed vim procps findutils debianutils; pip3 install meson==0.44.0; sed -i '/# en_US.UTF-8 UTF-8/s/..//' /etc/locale.gen && locale-gen"
-          before_install:
-              - docker pull ${DISTRO_TYPE}
-
-        - os: osx
-          compiler: clang
-          before_install:
-              - brew update
-          env:
-              # This variable is not required by macOS builds, but setting it for Travis dashboard.
-              - DISTRO_TYPE=macOS
 
 services:
     - docker
 
-script:
-    - if [[ $TRAVIS_OS_NAME == "osx" ]]; then exec scripts/build-on-macos.sh; fi
+matrix:
+    include:
+        - env:
+            - PROJECT_NAME=kshdb
+              GIT_URL="https://github.com/rocky/kshdb.git"
+              COMMANDS="git checkout att-ksh93v-testing; ksh ./autogen.sh; make test"
 
-    - docker run -v $TRAVIS_BUILD_DIR:/source ${DISTRO_TYPE} bash -c "set -e;
-        ${INSTALL_REQUIREMENTS};
-        useradd --create-home test;
-        chown -R test /source;
-        sudo -u test /source/scripts/build-on-docker.sh"
+script:
+    - docker pull fedora
+
+      # Test builds from https://copr.fedorainfracloud.org/coprs/g/ksh/latest/
+    - docker run fedora bash -c "
+      dnf install -y 'dnf-command(copr)';
+      dnf copr enable -y @ksh/latest;
+      dnf install -y ksh git autoconf automake make findutils;
+      git clone $GIT_URL;
+      cd $PROJECT_NAME;
+      $COMMANDS"

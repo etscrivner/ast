@@ -8,6 +8,10 @@
 # Otherwise any uncommitted source files are linted. If there is no uncommitted change
 # then the files in the most recent commit are linted.
 #
+
+# Allow for handling filenames with spaces
+IFS=$'\n'
+
 typeset all=no
 typeset git_clang_format=no
 typeset -a c_files=()
@@ -35,7 +39,7 @@ fi
 
 if [[ ${all} == yes ]]
 then
-    files=$(git status --porcelain --short --untracked-files=all | sed -e 's/^ *[^ ]* *//')
+    files=( $(git status --porcelain --short --untracked-files=all | sed -e 's/^ *[^ ]* *//') )
 
     if [[ ${files[0]} ]]
     then
@@ -45,7 +49,7 @@ then
         exit
     fi
 
-    files=$(find src -name **.h -o -name **.c)
+    files=( $(find src -name "**.h" -o -name "**.c") )
 elif [[ ${1} ]]
 then
     for next_file in $*
@@ -55,7 +59,7 @@ then
             files+=( ${next_file} )
         elif [ -d ${next_file} ]
         then
-            files+=$(find ${next_file} -name **.h -o -name **.c)
+            files+=( $(find "${next_file}" -name "**.h" -o -name "**.c") )
         fi
     done
 else
@@ -64,7 +68,7 @@ else
     # files in the most recent commit. Select (cached files) (modified but not cached,
     # and untracked files).
     files=$(git diff-index --cached HEAD --name-only)
-    files+=$(git ls-files --exclude-standard --others --modified)
+    files+=( $(git ls-files --exclude-standard --others --modified) )
     if [[ ${files[0]} ]]
     then
         # Pending changes so restyle just the regions modified.
@@ -76,20 +80,20 @@ else
 fi
 
 # Filter out non C source files.
-for file in ${files[*]}
+for file in "${files[@]}"
 do
-    case ${file} in
+    case "${file}" in
         *.c | *.h )
-            if [[ -f ${file} ]]
+            if [[ -f "${file}" ]]
             then
-                c_files+=( ${file} )
+                c_files+=( "${file}" )
             fi
             ;;
     esac
 done
 
 # Run the C reformatter if we have any C files
-if [[ ! ${c_files} ]]
+if [[ ! "${c_files}" ]]
 then
     echo
     echo 'WARNING: No C files to restyle'
@@ -119,16 +123,16 @@ else
         echo ========================================
         echo Running clang-format
         echo ========================================
-        for file in ${c_files[*]}
+        for file in "${c_files[@]}"
         do
-            cp ${file} ${file}.new
-            clang-format ${file} >${file}.new
-            if cmp -s ${file} ${file}.new
+            cp "${file}" "${file}.new"
+            clang-format "${file}" >"${file}.new"
+            if cmp -s "${file}" "${file}.new"
             then
-                rm ${file}.new
+                rm "${file}.new"
             else
-                echo ${file} was NOT correctly formatted
-                mv ${file}.new ${file}
+                echo "${file} was NOT correctly formatted"
+                mv "${file}.new" "${file}"
             fi
         done
     else

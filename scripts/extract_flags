@@ -27,7 +27,10 @@ output_json = []
 for file_item in input_json:
     if file_item["file"] == file_to_lint:
         for define in extract_defines(file_item["command"]):
-            print(define, file=sys.stdout)
+            # Exclude temporarily generated files with mangled names such as:
+            # `src/cmd/builtin/src@cmd@builtin@@pty@exe`
+            if not '@' in define:
+                print(define, file=sys.stdout)
         break
 
 sys.exit(0)

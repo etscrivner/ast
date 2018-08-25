@@ -822,13 +822,17 @@ Namval_t *nv_arraychild(Namval_t *np, Namval_t *nq, int c) {
     if (!ap) {
         nv_putsub(np, NULL, 0, ARRAY_FILL);
         ap = nv_arrayptr(np);
+
+        if (!ap) {
+            return ((Namval_t*)0);
+        }
     }
     if (!(up = array_getup(np, ap, 0))) return ((Namval_t *)0);
     np->nvalue.cp = up->cp;
     if ((tp = nv_type(np)) || c) {
         ap->flags |= ARRAY_NOCLONE;
         nq->nvenv = (char *)np;
-        if (c == 't') {
+        if (c == 't' && tp) {
             nv_clone(tp, nq, 0);
         } else {
             nv_clone(np, nq, NV_NODISC);

@@ -62,8 +62,8 @@ static_fn size_t path_prog(const char *command, char *path, size_t size) {
 #endif
 
 #ifdef _PROC_PROG
-    if ((n = readlink(_PROC_PROG, path, size)) > 0 && *path == '/') {
-        if (n < size) path[n] = 0;
+    if ((n = readlink(_PROC_PROG, path, size - 1)) > 0 && *path == '/') {
+        path[n] = '\0';
         return n;
     }
 #endif
@@ -110,7 +110,7 @@ found:
 }
 
 size_t pathprog(const char *command, char *path, size_t size) {
-    char *rel;
+    char *rel = NULL;
     ssize_t n;
 
     if ((n = path_prog(command, path, size)) > 0 && n < size && *path != '/' &&
@@ -118,5 +118,6 @@ size_t pathprog(const char *command, char *path, size_t size) {
         n = pathpath(rel, NULL, PATH_REGULAR | PATH_EXECUTE, path, size) ? strlen(path) : 0;
         free(rel);
     }
+
     return n;
 }
